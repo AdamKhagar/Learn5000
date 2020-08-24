@@ -1,4 +1,4 @@
-token = '1356654480:AAG8kvXn5x9PVLM8V8UEE4GuMXyuA4CL-48'
+
 languages = {'English': 'words/English-words.json'}
 send_time_var = {
     'Утром': 1,

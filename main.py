@@ -1,7 +1,8 @@
 import telebot
 import json
 from datetime import datetime
-from config import token, profiles, languages, send_time_var
+from config import profiles, languages, send_time_var
+from secret import token
 from time import strftime, sleep
 from user import User
 from words import Words
