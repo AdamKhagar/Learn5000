@@ -51,20 +51,9 @@ class Words():
                 i += 1
         
         return res
-
-    def get_words(self):
-        words = 'Новые слова на сегодня \n\n'
-
-        for word in self.new_words():
-            words += word + '\n'
-
-        if self.repeat_words() != None:
-            words += '\n' + 'Слова для повторения \n\n'
-            for word in self.repeat_words():
-                words += word + '\n'
-
-        return words
-
+    
+        
+        
 
 
         
