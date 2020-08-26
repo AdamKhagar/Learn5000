@@ -12,6 +12,16 @@ from threading import Thread
 bot = telebot.TeleBot(token)
 keyboard_off = telebot.types.ReplyKeyboardRemove()
 
+def try_send(user_id, text, keyboard=None):
+    '''does the same telebot.send_message() and deletes data from locked chats'''
+    try:
+        bot.send_message(user_id, text, reply_markup=keyboard)
+    # обработка заблокированных чатов
+    except telebot.apihelper.ApiException:
+        user = User(user_id)
+        print(f'delete user#{user_id}')
+        user.del_user()
+
 def get_user_list():
     with open('users_data/users_list.json', encoding='utf-8') as f:
         return json.load(f)
@@ -21,51 +31,39 @@ def send_messages(users):
     for u in users:
         user = User(u)
         if user.get_time() == time_zone() and user.get_last_day() != strftime('%x'):
-            # обработка проблемных пользователей
+            # message limitation 
+            #
+            # this is necessary because telegram api 
+            # limits us to 30 messages per second
+            # in addition, we have other threads that 
+            # also need to respond to user requests
+            # so I set a limit of 10 messages per second
+            # from this thread
             if i == 10:
                 i = 0
                 sleep(1)
             user.set_last_day()
             if user.check_data() == 1:
+                # data error
+                i += 1
                 print('problem_data')
                 print(u)
-                try:
-                    bot.send_message(
-                        u,
-                        '''Ваши данные не корректны. 
-                        Пожалуйста нажмите /reset для повторной отпраки данных'''
-                    )
-                # обработка заблокированных чатов
-                except telebot.apihelper.ApiException:
-                    print(f'delete user#{u}')
-                    user.del_user()
-                finally:
-                    continue
+                with open('templates/data-error.txt', encoding='utf-8') as f:
+                    try_send(u, f.read())
+
             elif user.check_data() == 2:
-                pass
-            # ограничение на отправку сообщений в секунду
-            w = Words(user)
-            words = 'Новые слова на сегодня \n\n'
+                # no message waiting
+                print('no message waiting')
+                print(u)
 
-            for word in w.new_words():
-                words += word + '\n'
+            elif user.check_data():
+                # all rigtht
+                i += 1
+                w = Words(user)
+                words = w.get_words()
+                print('ok')
 
-            if w.repeat_words() != None:
-                words += '\n' + 'Слова для повторения \n\n'
-                for word in w.repeat_words():
-                    words += word + '\n'
-            print('ok')
-            
-            try:
-                bot.send_message(u, words)
-            # обработка заблокированных чатов
-            except telebot.apihelper.ApiException:
-                print(f'delete user#{u}')
-                user.del_user()
-            
-            i += 1
-
-
+                try_send(u, words)
 
 def time_zone():
     ''' возвращает номер профиль для отправки сообщений по времени '''
@@ -94,12 +92,7 @@ def time_in_range(start, end):
 
 #     else:
 #         next_t = profiles[1 + current][0]
-    
-    
-    
-    
-    
-    
+
 def sender():
     while True: 
         if time_zone() == False:
@@ -116,12 +109,8 @@ def get_current_state(user_id):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    with open('first_message.txt', 'r', encoding='utf-8') as f:
-
-        bot.send_message(
-            message.chat.id,
-            f.read()
-        )
+    with open('temlates/first_message.txt', encoding='utf-8') as f:
+        try_send(message.chat.id, f.read())
 
     setting_1(chat_id = message.chat.id)
 
@@ -129,11 +118,8 @@ def start(message):
 def setting_1(message = None, chat_id = None):
     if message != None:
         chat_id = message.chat.id
-
-        bot.send_message(
-            chat_id,
-            'Ну давай по новой'
-        )
+        with open('templates/reset.txt', encoding='utf-8') as f:
+            try_send(chat_id, f.read())
 
     user = User(chat_id)
     user.set_state('set_lang')
@@ -146,11 +132,8 @@ def setting_1(message = None, chat_id = None):
     for language in languages: 
         keyboard.add(language)
 
-    bot.send_message(
-        chat_id,
-        'Какой язык учим?',
-        reply_markup=keyboard
-    )
+    with open('templates/lang_q.txt', encoding='utf-8') as f:
+        try_send(chat_id, f.read(), keyboard)
 
 @bot.message_handler(content_types=['text'],
     func=lambda message: get_current_state(message.chat.id) == 'set_lang')
@@ -159,18 +142,13 @@ def answer_setting_1(message):
         user = User(message.chat.id)
         user.set_lang(message.text)
 
-        bot.send_message(
-            message.chat.id,
-            'Хорошо',
-            reply_markup=keyboard_off
-        )
+        with open('templates/lang_q_a.txt', encoding='utf-8') as f:
+            try_send(message.chat.id, f.read(), keyboard_off)
 
         setting_2(message.chat.id)
     else:
-        bot.send_message(
-            message.chat.id,
-            'Повторика еще раз'
-        )
+        with open('templates/repeat.txt', encoding='utf-8') as f:
+            try_send(message.chat.id, f.read())
 
         choise_language(chat_id=message.chat.id)
 
@@ -186,11 +164,8 @@ def setting_2(chat_id):
     for t in send_time_var: 
         keyboard.add(t)
 
-    bot.send_message(
-        chat_id,
-        'В какое время тебе удобно учить слова?',
-        reply_markup=keyboard
-    )
+    with open('templates/time_q.txt', encoding='utf-8') as f:
+        try_send(chat_id, f.read(), keyboard)
 
 @bot.message_handler(content_types=['text'],
     func=lambda message: get_current_state(message.chat.id) == 'set_time')
@@ -199,18 +174,13 @@ def answer_setting_2(message):
         user = User(message.chat.id)
         user.set_time(send_time_var[message.text])
 
-        bot.send_message(
-            message.chat.id,
-            'Принято',
-            reply_markup=keyboard_off
-        )
+        with open('templates/time_g_a.txt', encoding='utf-8') as f:
+            try_send(message.chat.id, f.read(), keyboard_off)
 
         setting_3(message.chat.id)
     else:
-        bot.send_message(
-            message.chat.id,
-            'Ну ка повтори'
-        )
+        with open('templates/time_b_a.txt', encoding='utf-8') as f:
+            try_send(message.chat.id, f.read())
 
         set_time(chat_id=message.chat.id)
 
