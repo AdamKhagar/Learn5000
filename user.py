@@ -17,16 +17,11 @@ class User():
         self.__send_time_f = f'{self.__path_dir}/send_time#{self.__id}.json'
         self.__qty_f = f'{self.__path_dir}/send_qty#{self.__id}.json'
         self.__history_f = f'{self.__path_dir}/history#{self.__id}.json'
-        self.__files = (
-            self.__state_f,
-            self.__lang_f,
-            self.__send_time_f, 
-            self.__qty_f
-        )
+        self.__mode_f = f'{self.__path_dir}/mode#{self.__id}.json'
         try: 
             os.mkdir(self.__path_dir)
         except OSError:
-                pass
+            pass
         finally:
             self.__new()                 
 
@@ -35,9 +30,6 @@ class User():
         if self.__id not in users:
             users.append(self.__id)
             self.__set(users, self.__users_f)
-            for file in self.__files:
-                with open(file, 'w', encoding='utf-8'):
-                    pass
             self.set_state()
 
     def __set(self, data: 'recorded information', path: 'file path'):
@@ -47,6 +39,16 @@ class User():
     def __get(self, path: 'file path'):
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
+
+    def set_mode(self, mode='await'):
+        self.__set(mode, self.__mode_f)
+
+    def get_mode(self):
+        try:
+            return self.__get(self.__mode_f)
+        except FileNotFoundError:
+            self.set_mode()
+            return 'await'
 
     def set_swap(self, swap):
         '''save on the clipboard'''
