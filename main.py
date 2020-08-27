@@ -65,9 +65,6 @@ def send_messages(users):
             
             else: 
                 print('хрень')
-    else: 
-        # we need a func which slept this thread before next time period
-        pass
 
 def time_zone():
     ''' возвращает номер профиль для отправки сообщений по времени '''
