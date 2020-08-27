@@ -15,7 +15,6 @@ def try_send(user_id, text, keyboard=None):
     '''does the same telebot.send_message() and deletes data from locked chats'''
     try:
         bot.send_message(user_id, text, reply_markup=keyboard)
-    # обработка заблокированных чатов
     except telebot.apihelper.ApiException:
         user = User(user_id)
         print(f'delete user#{user_id}')
@@ -42,7 +41,7 @@ def send_messages(users):
                 i = 0
                 sleep(1)
             user.set_last_day()
-            if user.check_data() == 1:
+            if user.check_data() == 'data error':
                 # data error
                 i += 1
                 print('problem_data')
@@ -50,12 +49,12 @@ def send_messages(users):
                 with open('templates/data-error.txt', encoding='utf-8') as f:
                     try_send(u, f.read())
 
-            elif user.check_data() == 2:
+            elif user.check_data() == 'no await':
                 # no message waiting
                 print('no message waiting')
                 print(u)
 
-            elif user.check_data():
+            elif user.check_data() == 'good':
                 # all rigtht
                 i += 1
                 w = Words(user)
@@ -63,6 +62,12 @@ def send_messages(users):
                 print('ok')
 
                 try_send(u, words)
+            
+            else: 
+                print('хрень')
+    else: 
+        # we need a func which slept this thread before next time period
+        pass
 
 def time_zone():
     ''' возвращает номер профиль для отправки сообщений по времени '''
@@ -83,13 +88,13 @@ def time_in_range(start, end):
         return start <= x or x <= end
 
 def sender():
-    while True: 
-        if time_zone() == False:
-            print('check_time')
-            sleep(30*60)
-        else: 
-            print('\n\n\n')
+    last_time = 0
+    while True:  
+        if last_time != time_zone() and time_zone() != False: 
+            last_time = time_zone()
             send_messages(get_user_list())
+        else:
+            sleep(30*60)
 
 def get_current_state(user_id):
     user = User(user_id)
@@ -252,8 +257,10 @@ def answer_set_count_r(message):
 
         set_count_r(chat_id=message.chat.id, repeat=True)
 
+
 if __name__ == '__main__':
     handler = Thread(target = bot.polling)
     send = Thread(target=sender)
     handler.start()
+    send.start()
     

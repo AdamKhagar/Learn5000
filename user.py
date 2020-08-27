@@ -5,7 +5,7 @@ from shutil import rmtree
 from config import languages
 
 class User():
-    ''' It's a "simple database management system" '''
+    ''' It's a simple dbms '''
     def __init__(self, user_id):
         self.__id = user_id
         self.__path_dir = f'users_data/user_data#{self.__id}'
@@ -26,13 +26,15 @@ class User():
             self.__new()                 
 
     def __new(self):
+        '''this func adds the user to the user_list.json if he is not exist'''
         users = self.__get(self.__users_f)
         if self.__id not in users:
             users.append(self.__id)
             self.__set(users, self.__users_f)
             self.set_state()
 
-    def __set(self, data: 'recorded information', path: 'file path'):
+    def __set(self, data, path):
+        
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
@@ -73,26 +75,24 @@ class User():
         
     def set_lang(self, lang):
         '''select current language'''
-        setting = {'Language': lang}
-        self.__set(setting, self.__lang_f)
+        self.__set(lang, self.__lang_f)
 
     def get_lang(self):
         '''get current language'''
         try:
-            return self.__get(self.__lang_f)['Language']
-        except Exception:
+            return self.__get(self.__lang_f)
+        except FileNotFoundError:
             return False
         
     def set_time(self, send_time):
         '''set the time of shipment'''
-        setting = {'Time': send_time}
-        self.__set(setting, self.__send_time_f)
+        self.__set(send_time, self.__send_time_f)
 
     def get_time(self):
         '''get shipping time'''
         try:
-            return self.__get(self.__send_time_f)['Time']
-        except Exception:
+            return self.__get(self.__send_time_f)
+        except FileNotFoundError:
             return False
 
     def set_send_qty(self, qty_n, qty_r):
@@ -104,7 +104,7 @@ class User():
         '''get word count per day'''
         try:
             return self.__get(self.__qty_f)
-        except Exception:
+        except FileNotFoundError:
             return False
 
     def set_last_day(self):
@@ -140,12 +140,12 @@ class User():
             self.__set(used, self.__progress_f)
 
     def check_data(self):
-        if self.get_lang() == False or self.get_time() == False or self.get_send_qty() == False:
-            return 1
+        if not self.get_lang() or not self.get_time() or not self.get_send_qty():
+            return 'data error'
         elif self.get_state() != 'await':
-            return 2
+            return 'no await'
         else:
-            return True
+            return 'good'
         
     def del_user(self):
         try:
