@@ -2,13 +2,15 @@ import telebot
 import json
 from datetime import datetime
 from config import profiles, languages, send_time_var
-from secret import token
+from secret import token, admin_token
 from time import strftime, sleep
 from user import User
 from words import Words
 from threading import Thread
 
 bot = telebot.TeleBot(token)
+admin_bot = telebot.TeleBot(admin_token)
+
 keyboard_off = telebot.types.ReplyKeyboardRemove()
 
 def try_send(user_id, text, keyboard=None):
@@ -23,6 +25,21 @@ def try_send(user_id, text, keyboard=None):
 def get_user_list():
     with open('users_data/users_list.json', encoding='utf-8') as f:
         return json.load(f)
+
+def get_admin_id():
+    with open('users_data/admins.json') as f:
+        return json.load(f)['id']
+
+def get_admin_state():
+    with open('users_data/admins.json') as f:
+        return json.load(f)['state']
+
+def set_admin_state(state='await'):
+    with open('users_data/admins.json') as f:
+        admin_data = json.load(f)
+    admin_data['state'] = state
+    with open('users_data/admins.json', 'w', encoding='utf-8') as f:
+        json.dump(admin_data, f, ensure_ascii=False, indent=4)
 
 def send_messages(users):
     i = 0 
@@ -91,11 +108,24 @@ def sender():
             last_time = time_zone()
             send_messages(get_user_list())
         else:
-            sleep(30*60)
+            sleep(10*60)
 
 def get_current_state(user_id):
     user = User(user_id)
     return user.get_state()
+
+@admin_bot.message_handler(commands=['send'],
+    func=lambda message: message.chat.id == get_admin_id())
+def send_message_from_admin(message):
+    admin_bot.send_message(message.chat.id, 'Отправь сообщение мне')
+    set_admin_state('send')
+
+@admin_bot.message_handler(content_types=['text'], 
+    func=lambda message: message.chat.id == get_admin_id() and get_admin_state() == 'send')
+def answer_send_message_from_admin(message):
+    set_admin_state()
+    for user in get_user_list():
+        try_send(user, message.text)
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -257,7 +287,8 @@ def answer_set_count_r(message):
 
 if __name__ == '__main__':
     handler = Thread(target = bot.polling)
+    admin = Thread(target=admin_bot.polling)
     send = Thread(target=sender)
     handler.start()
     send.start()
-    
+    admin.start()
