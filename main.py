@@ -143,12 +143,12 @@ def reset(message):
 
 @bot.message_handler(commands=['about'])
 def about(message):
-    with open('about.txt', encoding='utf-8') as f:
+    with open('templates/about.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
 
 @bot.message_handler(commands=['feedback'])
 def feedback(message):
-    with open('feedback.txt', encoding='utf-8') as f:
+    with open('templates/feedback.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
 
 @bot.message_handler(commands=['language'])

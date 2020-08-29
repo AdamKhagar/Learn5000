@@ -35,10 +35,8 @@ class Words():
         qty = self.__qty[1]
         used = self.__dbms.get_progress(self.__lang)
         
-        if len(used) == 0:
+        if len(used) <= self.__qty[1]:
             return None
-        elif qty >= len(used):
-            qty = len(used)
         
         r_used = []
         i = 0
