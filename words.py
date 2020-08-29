@@ -7,7 +7,7 @@ class Words():
         self.__dbms = dbms
         self.__lang = self.__dbms.get_lang()
         self.__qty = self.__dbms.get_send_qty()
-        # 
+        self.__prev_used = []
         self.__used_id = []
         with open(languages[self.__lang], 'r', encoding='utf-8') as f:
             self.__words = json.load(f)
@@ -23,11 +23,13 @@ class Words():
         
         while (i < qty):
             index = randint(0, len(self.__words)-1)
-            if index not in used:
+            if index not in used and index not in self.__prev_used:
                 used.append(index)
+                self.__prev_used.append(index)
                 res.append(self.__words[index])
                 i += 1
-        self.__dbms.set_progress(self.__lang, used)
+        else:
+            self.__dbms.set_progress(self.__lang, used)
 
         return res
     
@@ -38,13 +40,12 @@ class Words():
         if len(used) <= self.__qty[1]:
             return None
         
-        r_used = []
         i = 0
         res = []
         while (i < qty):
             index = used[randint(0, len(used) - 1)]
-            if index not in r_used:
-                r_used.append(index)
+            if index not in self.__prev_used:
+                self.__prev_used.append(index)
                 res.append(self.__words[index])
                 i += 1
         
