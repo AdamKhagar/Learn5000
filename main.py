@@ -82,7 +82,8 @@ def send_messages(users):
             
             else: 
                 print('хрень')
-
+    else:
+        sleep(5*60)
 def time_zone():
     ''' возвращает номер профиль для отправки сообщений по времени '''
     for key, value in profiles.items():
@@ -102,13 +103,11 @@ def time_in_range(start, end):
         return start <= x or x <= end
 
 def sender():
-    last_time = 0
     while True:  
-        if last_time != time_zone() and time_zone() != False: 
-            last_time = time_zone()
+        if time_zone() != False: 
             send_messages(get_user_list())
         else:
-            sleep(10*60)
+            sleep(60*60)
 
 def get_current_state(user_id):
     user = User(user_id)
