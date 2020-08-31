@@ -39,7 +39,8 @@ class Words():
         
         if len(used) <= self.__qty[1]:
             return None
-        
+        elif len(used) <= len(self.__prev_used):
+            return None
         i = 0
         res = []
         while (i < qty):
@@ -49,6 +50,8 @@ class Words():
                 res.append(self.__words[index])
                 i += 1
         
+        if len(res) == 0:
+            return None
         return res
 
     def get_words(self):

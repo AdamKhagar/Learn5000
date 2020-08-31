@@ -79,11 +79,9 @@ def send_messages(users):
                 print('ok')
 
                 try_send(u, words)
-            
-            else: 
-                print('хрень')
     else:
         sleep(5*60)
+
 def time_zone():
     ''' возвращает номер профиль для отправки сообщений по времени '''
     for key, value in profiles.items():
