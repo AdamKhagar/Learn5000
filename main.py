@@ -126,7 +126,7 @@ def answer_send_message_from_admin(message):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    with open('temlates/first_message.txt', encoding='utf-8') as f:
+    with open('templates/first_message.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
 
     set_language(chat_id=message.chat.id)
