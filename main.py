@@ -155,7 +155,7 @@ def get_words(message):
     user = User(message.chat.id)
     w = Words(user)
     with open('templates/get_words.txt', encoding='utf-8') as f:
-        words = f.read()
+        words = f.read() + '\n'
     for word in w.new_words(10):
         words += '\n' + word
     try_send(message.chat.id, words)
