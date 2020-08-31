@@ -102,9 +102,11 @@ def time_in_range(start, end):
 
 def sender():
     while True:  
-        if time_zone() != False: 
+        if time_zone() != False:
+            print('send') 
             send_messages(get_user_list())
         else:
+            print('not time')
             sleep(60*60)
 
 def get_current_state(user_id):
@@ -147,6 +149,16 @@ def about(message):
 def feedback(message):
     with open('templates/feedback.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
+
+@bot.message_handler(commands=['get_words'])
+def get_words(message):
+    user = User(message.chat.id)
+    w = Words(user)
+    with open('templates/get_words.txt', encoding='utf-8') as f:
+        words = f.read()
+    for word in w.new_words(10):
+        words += '\n' + word
+    try_send(message.chat.id, words)
 
 @bot.message_handler(commands=['language'])
 def set_language(message=None, chat_id=None, repeat=False):

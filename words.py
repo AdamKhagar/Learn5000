@@ -15,8 +15,9 @@ class Words():
     def __get_random(self, words):
         return randint(0, len(words))
 
-    def new_words(self):
-        qty = self.__qty[0]
+    def new_words(self, qty=None):
+        if qty == None:
+            qty = self.__qty[0]
         used = self.__dbms.get_progress(self.__lang)
         i = 0
         res = []
