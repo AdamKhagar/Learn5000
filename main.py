@@ -107,7 +107,7 @@ def sender():
             send_messages(get_user_list())
         else:
             print('not time')
-            sleep(60*60)
+            sleep(10*60)
 
 def get_current_state(user_id):
     user = User(user_id)
@@ -125,6 +125,11 @@ def answer_send_message_from_admin(message):
     set_admin_state()
     for user in get_user_list():
         try_send(user, message.text)
+
+@admin_bot.message_handler(commands=['user_count'],
+    func=lambda message: message.chat.id == get_admin_id())
+def get_user_count(message):
+    admin_bot.send_message(get_admin_id(), len(get_user_list()))
 
 @bot.message_handler(commands=['start'])
 def start(message):
