@@ -1,11 +1,12 @@
 import telebot
 import json
 from datetime import datetime
-from config import profiles, languages, send_time_var
+from config import profiles, languages, send_time_var, feed_answers
 from secret import token, admin_token
 from time import strftime, sleep
 from user import User
 from words import Words
+from feedback import *
 from threading import Thread
 
 bot = telebot.TeleBot(token)
@@ -150,10 +151,58 @@ def about(message):
     with open('templates/about.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
 
-@bot.message_handler(commands=['feedback'])
-def feedback(message):
-    with open('templates/feedback.txt', encoding='utf-8') as f:
+@bot.message_handler(commands=['manual'])
+def manual(message):
+    with open('templates/manual.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
+        
+@bot.message_handler(commands=['feedback'])
+def feed_step_1(message=None, chat_id=None):
+    if chat_id == None:
+        chat_id = message.chat.id
+
+    user = User(chat_id)
+    if user.get_mode() == 'await' or user.check_data() == 'good':
+        keyboard = telebot.types.ReplyKeyboardMarkup(
+            one_time_keyboard=False,
+            resize_keyboard=True
+        )
+        
+        for var in feed_answers:
+            keyboard.add(var)
+
+        with open('templates/feed_q.txt', encoding='utf-8') as f:
+            try_send(chat_id, f.read(), keyboard)
+        user.set_state('feed_1')
+    else:
+        with open('templates/no_await.txt', encoding='utf-8') as f:
+            try_send(chat_id, f.read()) 
+
+@bot.message_handler(content_types=['text'], 
+    func=lambda message: get_current_state(message.chat.id) == 'feed_1')
+def feed_step_2(message):
+    if message.text in feed_answers:
+        user = User(message.chat.id)
+        user.set_swap('isBad', feed_answers[message.text])
+        user.set_state('feed_2')
+        with open('templates/feed_a.txt', encoding='utf-8') as f:
+            try_send(message.chat.id, f.read(), keyboard_off)
+    else:
+        with open('templates/feed_b_a.txt', encoding='utf-8') as f:
+            try_send(message.chat.id, f.read())
+
+        feed_step_1(chat_id=message.chat.id)
+
+@bot.message_handler(content_types=['text'], 
+    func=lambda message: get_current_state(message.chat.id) == 'feed_2')
+def feed_step_3(message):
+    user = User(message.chat.id)
+    feed = Feed(
+        message.chat.id,
+        user.get_swap()['isBad'],
+        message.text
+    )
+    Feedback.save_feedback(feed)
 
 @bot.message_handler(commands=['get_words'])
 def get_words(message):
@@ -261,7 +310,7 @@ def answer_set_count_n(message):
         count_n = int(message.text)
 
         user = User(message.chat.id)
-        user.set_swap({'count_n': count_n})
+        user.set_swap('count_n', count_n)
         user.set_state()
 
         set_count_r(chat_id=message.chat.id)
@@ -269,7 +318,7 @@ def answer_set_count_n(message):
         with open('templates/no_digit.txt', encoding='utf-8') as f:
             try_send(message.chat.id, f.read())
 
-        set_count_n(chat_id=message.chat.id)
+        set_count_n(chat_id=message.chat.id, repeat=True)
         
 def set_count_r(chat_id, repeat=False):
 

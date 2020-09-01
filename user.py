@@ -34,7 +34,6 @@ class User():
             self.set_state()
 
     def __set(self, data, path):
-        
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
@@ -52,9 +51,15 @@ class User():
             self.set_mode()
             return 'await'
 
-    def set_swap(self, swap):
+    def set_swap(self, key, value):
         '''save on the clipboard'''
-        self.__set(swap, self.__swap_f)
+        try:
+            swap = self.get_swap()
+        except FileNotFoundError:
+            swap = {}
+        finally:
+            swap[key] = value
+            self.__set(swap, self.__swap_f)
 
     def get_swap(self):
         '''get it from the clipboard''' 

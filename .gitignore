@@ -2,3 +2,4 @@
 /.vscode/**
 /users_data/**
 secret.py
+/feedbacks/**

@@ -14,6 +14,11 @@ profiles = {
     4: ['20:00:00', '23:30:00']
 }
 
+feed_answers = {
+    'Сообщение об ошибке': True ,
+    'Отзыв/предложение': False
+}
+
 list_path = 'users_data/users_list.json'
 dir_path = 'users_data/user_data#{}'
 f_path = {
