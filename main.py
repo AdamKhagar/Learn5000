@@ -155,7 +155,7 @@ def about(message):
 def manual(message):
     with open('templates/manual.txt', encoding='utf-8') as f:
         try_send(message.chat.id, f.read())
-        
+
 @bot.message_handler(commands=['feedback'])
 def feed_step_1(message=None, chat_id=None):
     if chat_id == None:
@@ -197,6 +197,7 @@ def feed_step_2(message):
     func=lambda message: get_current_state(message.chat.id) == 'feed_2')
 def feed_step_3(message):
     user = User(message.chat.id)
+    user.set_state()
     feed = Feed(
         message.chat.id,
         user.get_swap()['isBad'],
