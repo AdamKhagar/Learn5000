@@ -1,5 +1,7 @@
 import telebot
 import json
+from admin import Admin
+from template import Template
 from datetime import datetime
 from config import profiles, languages, send_time_var, feed_answers
 from secret import token, admin_token
@@ -23,25 +25,6 @@ def try_send(user_id, text, keyboard=None):
         print(f'delete user#{user_id}')
         user.del_user()
 
-def get_user_list():
-    with open('users_data/users_list.json', encoding='utf-8') as f:
-        return json.load(f)
-
-def get_admin_id():
-    with open('users_data/admins.json') as f:
-        return json.load(f)['id']
-
-def get_admin_state():
-    with open('users_data/admins.json') as f:
-        return json.load(f)['state']
-
-def set_admin_state(state='await'):
-    with open('users_data/admins.json') as f:
-        admin_data = json.load(f)
-    admin_data['state'] = state
-    with open('users_data/admins.json', 'w', encoding='utf-8') as f:
-        json.dump(admin_data, f, ensure_ascii=False, indent=4)
-
 def send_messages(users):
     i = 0 
     for u in users:
@@ -55,7 +38,7 @@ def send_messages(users):
             # also need to respond to user requests
             # so I set a limit of 10 messages per second
             # from this thread
-            if i == 10:
+            if i == 5:
                 i = 0
                 sleep(1)
             user.set_last_day()
@@ -64,8 +47,7 @@ def send_messages(users):
                 i += 1
                 print('problem_data')
                 print(u)
-                with open('templates/data-error.txt', encoding='utf-8') as f:
-                    try_send(u, f.read())
+                try_send(u, Template.data_error())
 
             elif user.check_data() == 'no await':
                 # no message waiting
@@ -105,56 +87,53 @@ def sender():
     while True:  
         if time_zone() != False:
             print('send') 
-            send_messages(get_user_list())
+            send_messages(User.users_list())
         else:
             print('not time')
             sleep(10*60)
 
-def get_current_state(user_id):
-    user = User(user_id)
-    return user.get_state()
-
 @admin_bot.message_handler(commands=['send'],
-    func=lambda message: message.chat.id == get_admin_id())
+    func=lambda message: Admin.isAdmin(message.chat.id))
 def send_message_from_admin(message):
     admin_bot.send_message(message.chat.id, 'Отправь сообщение мне')
-    set_admin_state('send')
+    Admin.set_state('send')
 
 @admin_bot.message_handler(content_types=['text'], 
-    func=lambda message: message.chat.id == get_admin_id() and get_admin_state() == 'send')
+    func=lambda message: Admin.isAdmin(message.chat.id) and Admin.get_state() == 'send')
 def answer_send_message_from_admin(message):
-    set_admin_state()
-    for user in get_user_list():
+    Admin.set_state()
+    for user in User.users_list():
         try_send(user, message.text)
 
-@admin_bot.message_handler(commands=['user_count'],
-    func=lambda message: message.chat.id == get_admin_id())
+@admin_bot.message_handler(commands=['count'],
+    func=lambda message: Admin.isAdmin(message.chat.id))
 def get_user_count(message):
-    admin_bot.send_message(get_admin_id(), len(get_user_list()))
+    admin_bot.send_message(Admin.get_id(), len(User.users_list()))
+
+@admin_bot.message_handler(commands=['feedback'], 
+    func=lambda message: Admin.isAdmin(message.chat.id))
+def admin_feedback(message):
+    pass
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    with open('templates/first_message.txt', encoding='utf-8') as f:
-        try_send(message.chat.id, f.read())
+    try_send(message.chat.id, Template.first_message())
 
     set_language(chat_id=message.chat.id)
 
 @bot.message_handler(commands=['reset'])
 def reset(message):
-    with open('templates/first_message.txt', encoding='utf-8') as f:
-        try_send(message.chat.id, f.read())
+    try_send(message.chat.id, Template.reset())
     
     set_language(chat_id=message.chat.id)
 
 @bot.message_handler(commands=['about'])
 def about(message):
-    with open('templates/about.txt', encoding='utf-8') as f:
-        try_send(message.chat.id, f.read())
+    try_send(message.chat.id, Template.about())
 
 @bot.message_handler(commands=['manual'])
 def manual(message):
-    with open('templates/manual.txt', encoding='utf-8') as f:
-        try_send(message.chat.id, f.read())
+    try_send(message.chat.id, Template.manual())
 
 @bot.message_handler(commands=['feedback'])
 def feed_step_1(message=None, chat_id=None):
@@ -171,46 +150,41 @@ def feed_step_1(message=None, chat_id=None):
         for var in feed_answers:
             keyboard.add(var)
 
-        with open('templates/feed_q.txt', encoding='utf-8') as f:
-            try_send(chat_id, f.read(), keyboard)
+        try_send(chat_id, Template.feed_q(), keyboard)
         user.set_state('feed_1')
     else:
-        with open('templates/no_await.txt', encoding='utf-8') as f:
-            try_send(chat_id, f.read()) 
+        try_send(chat_id, Template.no_await()) 
 
 @bot.message_handler(content_types=['text'], 
-    func=lambda message: get_current_state(message.chat.id) == 'feed_1')
+    func=lambda message: User.user_state(message.chat.id) == 'feed_1')
 def feed_step_2(message):
     if message.text in feed_answers:
         user = User(message.chat.id)
         user.set_swap('isBad', feed_answers[message.text])
         user.set_state('feed_2')
-        with open('templates/feed_a.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read(), keyboard_off)
+        try_send(message.chat.id, Template.feed_a(), keyboard_off)
     else:
-        with open('templates/feed_b_a.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read())
+        try_send(message.chat.id, Template.feed_b_a())
 
         feed_step_1(chat_id=message.chat.id)
 
 @bot.message_handler(content_types=['text'], 
-    func=lambda message: get_current_state(message.chat.id) == 'feed_2')
+    func=lambda message: User.user_state(message.chat.id) == 'feed_2')
 def feed_step_3(message):
     user = User(message.chat.id)
     user.set_state()
-    feed = Feed(
+    feedback = FeedbackTemplate(
         message.chat.id,
         user.get_swap()['isBad'],
         message.text
     )
-    Feedback.save_feedback(feed)
+    Feedback.save_feedback(feedback)
 
 @bot.message_handler(commands=['get_words'])
 def get_words(message):
     user = User(message.chat.id)
     w = Words(user)
-    with open('templates/get_words.txt', encoding='utf-8') as f:
-        words = f.read() + '\n'
+    words = Template.get_words() + '\n'
     for word in w.new_words(10):
         words += '\n' + word
     try_send(message.chat.id, words)
@@ -233,25 +207,22 @@ def set_language(message=None, chat_id=None, repeat=False):
     for language in languages: 
         keyboard.add(language)
     if not repeat:
-        with open('templates/lang_q.txt', encoding='utf-8') as f:
-            try_send(chat_id, f.read(), keyboard)
+        try_send(chat_id, Template.lang_q(), keyboard)
 
 @bot.message_handler(content_types=['text'],
-    func=lambda message: get_current_state(message.chat.id) == 'lang')
+    func=lambda message: User.user_state(message.chat.id) == 'lang')
 def answer_set_language(message):
     if message.text in languages:
         user = User(message.chat.id)
         user.set_lang(message.text)
 
-        with open('templates/lang_g_a.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read(), keyboard_off)
+        try_send(message.chat.id, Template.lang_g_a(), keyboard_off)
 
         user.set_state()
         if user.get_mode() == 'setting':
             set_time(chat_id=message.chat.id)
     else:
-        with open('templates/lang_b_a.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read())
+        try_send(message.chat.id, Template.lang_b_a())
 
         set_language(chat_id=message.chat.id, repeat=True)
 
@@ -271,24 +242,21 @@ def set_time(message=None, chat_id=None, repeat=False):
     for t in send_time_var: 
         keyboard.add(t)
     if not repeat:
-        with open('templates/time_q.txt', encoding='utf-8') as f:
-            try_send(chat_id, f.read(), keyboard)
+        try_send(chat_id, Template.time_q(), keyboard)
     
 @bot.message_handler(content_types=['text'], 
-    func=lambda message: get_current_state(message.chat.id) == 'time')
+    func=lambda message: User.user_state(message.chat.id) == 'time')
 def answer_set_time(message):
     if message.text in send_time_var:
         user = User(message.chat.id)
         user.set_time(send_time_var[message.text])
-        with open('templates/time_g_a.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read(), keyboard_off)
+        try_send(message.chat.id, Template.time_g_a(), keyboard_off)
 
         user.set_state()
         if user.get_mode() == 'setting':
             set_count_n(chat_id=message.chat.id)
     else:
-        with open('templates/time_b_a.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read())
+        try_send(message.chat.id, Template.time_b_a())
 
         set_time(chat_id=message.chat.id, repeat=True)
    
@@ -301,57 +269,55 @@ def set_count_n(message=None, chat_id=None, repeat=False):
     user.set_state('count_n')
 
     if not repeat:
-        with open('templates/count_n_q.txt', encoding='utf-8') as f:
-            try_send(chat_id, f.read())
-
+        try_send(chat_id, Template.count_n_q())
+     
 @bot.message_handler(content_types=['text'], 
-    func=lambda message: get_current_state(message.chat.id) == 'count_n')
+    func=lambda message: User.user_state(message.chat.id) == 'count_n')
 def answer_set_count_n(message):
     if message.text.isdigit():
-        count_n = int(message.text)
-
-        user = User(message.chat.id)
-        user.set_swap('count_n', count_n)
-        user.set_state()
-
-        set_count_r(chat_id=message.chat.id)
+        count_n = int(message.text)  
+        if 5 <= count_n <= 50:
+            user = User(message.chat.id)
+            user.set_swap('count_n', count_n)
+            user.set_state()
+            set_count_r(chat_id=message.chat.id)
+        else:
+            try_send(message.chat.id, Template.limit())
+            set_count_n(chat_id=message.chat.id, repeat=True)
     else:
-        with open('templates/no_digit.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read())
-
+        try_send(message.chat.id, Template.no_digit())
         set_count_n(chat_id=message.chat.id, repeat=True)
         
 def set_count_r(chat_id, repeat=False):
-
     user = User(chat_id)
     user.set_state('count_r')
     if not repeat:
-        with open('templates/count_r_q.txt', encoding='utf-8') as f:
-            try_send(chat_id, f.read())
+        try_send(chat_id, Template.count_r_q())
 
 @bot.message_handler(content_types=['text'], 
-    func=lambda message: get_current_state(message.chat.id) == 'count_r')
+    func=lambda message: User.user_state(message.chat.id) == 'count_r')
 def answer_set_count_r(message):
     if message.text.isdigit():
         count_r = int(message.text)
-        user = User(message.chat.id)
-        count_n = user.get_swap()['count_n']
-        user.set_send_qty(count_n, count_r)
-        user.set_state()
-        if user.get_mode() == 'setting':
-            user.set_mode()
-            with open('templates/end_set.txt', encoding='utf-8') as f:
-                try_send(message.chat.id, f.read())
+        if 5 <= count_r <= 50:
+            user = User(message.chat.id)
+            count_n = user.get_swap()['count_n']
+            user.set_send_qty(count_n, count_r)
+            user.set_state()
+            if user.get_mode() == 'setting':
+                user.set_mode()
+                try_send(message.chat.id, Template.end_set())
+        else:
+            try_send(message.chat.id, Template.limit())
+            set_count_r(chat_id=message.chat.id, repeat=True)
     else:
-        with open('templates/no_digit.txt', encoding='utf-8') as f:
-            try_send(message.chat.id, f.read())
-
+        try_send(message.chat.id, Template.no_digit())
         set_count_r(chat_id=message.chat.id, repeat=True)
 
 
 if __name__ == '__main__':
-    handler = Thread(target = bot.polling)
-    admin = Thread(target=admin_bot.polling)
+    handler = Thread(target = bot.polling, args=(True,))
+    admin = Thread(target=admin_bot.polling, args=(True,))
     send = Thread(target=sender)
     handler.start()
     send.start()

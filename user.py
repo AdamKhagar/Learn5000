@@ -161,3 +161,12 @@ class User():
         users.remove(self.__id)
         self.__set(users, self.__users_f)
         
+    @staticmethod
+    def users_list():
+        with open('users_data/users_list.json', encoding='utf-8') as f:
+            return json.load(f)
+
+    @staticmethod
+    def user_state(user_id):
+        user = User(user_id)
+        return user.get_state()
