@@ -110,10 +110,67 @@ def answer_send_message_from_admin(message):
 def get_user_count(message):
     admin_bot.send_message(Admin.get_id(), len(User.users_list()))
 
+def admin_send_feed(keyboard, isBad=Admin.get_isBad):
+    try: 
+        feed = Feedback.read_feedback(isBad)
+        Admin.set_current_feed(feed)
+        text = feed['description']
+    except FeedbackListIsEmptyError:
+        Admin.set_current_feed(False)
+        text = 'Список отзывов пуст'
+        keyboard = keyboard_off
+        admin_feed_close()
+
+    admin_bot.send_message(Admin.get_id(), text, reply_markup=keyboard)
+
+def admin_feed_close():
+    Admin.set_state()
+    admin_bot.send_message(Admin.get_id(), 'ок', reply_markup=keyboard_off)
+
 @admin_bot.message_handler(commands=['feedback'], 
     func=lambda message: Admin.isAdmin(message.chat.id))
-def admin_feedback(message):
-    pass
+def admin_feed_1(message=None):
+    keyboard = telebot.types.ReplyKeyboardMarkup(
+        one_time_keyboard=False,
+        resize_keyboard=True
+    )
+    Admin.set_state('feed')
+    for var in Admin.feedback_var:
+        keyboard.add(var)
+    admin_bot.send_message(Admin.get_id(), Template.feed_admin_q(), reply_markup=keyboard)
+
+@admin_bot.message_handler(content_types=['text'], 
+    func=lambda message: Admin.isAdmin(message.chat.id) and Admin.get_state() == 'feed' and (
+        message.text in Admin.feedback_var
+    ))
+def admin_feed_2(message):
+    isBad = Admin.feedback_var[message.text]
+    Admin.set_state('read')
+    admin_send_feed(Admin.feed_keyboard(), isBad)
+
+@admin_bot.message_handler(content_types=['text'], 
+    func=lambda message: Admin.isAdmin(message.chat.id) and Admin.get_state() == 'read')
+def admin_feed_3(message=None):
+    try:
+        option = Admin.feedback_options[message.text]
+    except KeyError: 
+        option = Admin.feedback_options_after_reply[message.text]
+
+    if option == 1:
+        Admin.set_state('reply')
+        admin_bot.send_message(Admin.get_id(), 'Пришли ответ мне', reply_markup=keyboard_off)
+    elif option == 2:
+        admin_send_feed(Admin.feed_keyboard())
+    elif option == 3:
+        admin_feed_close()
+
+@admin_bot.message_handler(content_types=['text'],
+    func=lambda message: Admin.isAdmin(message.chat.id) and Admin.get_state() == 'reply')
+def reply_to_feed(message):
+    admin_bot.send_message(Admin.get_id(), 'ok', reply_markup=Admin.feed_keyboard_after_reply())
+    Admin.set_state('read')
+    try_send(Admin.get_current_feed()['user_id'], message.text)
+
 
 @bot.message_handler(commands=['start'])
 def start(message):

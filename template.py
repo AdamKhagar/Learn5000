@@ -89,3 +89,7 @@ class Template():
     @staticmethod
     def limit():
         return Template.__get('limit')
+
+    @staticmethod
+    def feed_admin_q():
+        return Template.__get('feed_ad_q_1')
